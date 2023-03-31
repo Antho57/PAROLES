@@ -62,7 +62,12 @@ def main():
         fin_fenetre = debut_fenetre + N
         signal_modif[debut_fenetre:fin_fenetre] += morceau_32ms[i]
         somme_hamming[debut_fenetre:fin_fenetre] += fenetrageHamming(N)
+
+    for i in range(len(somme_hamming)):
+        if somme_hamming[i] == 0:
+            somme_hamming[i] = 1
     signal_modif = signal_modif / somme_hamming
+    print ("Signal modifié : ", signal_modif)
     write("resultat.wav", frequence_enchantillonage, np.int16(signal_modif))
 
 if __name__ == "__main__":
