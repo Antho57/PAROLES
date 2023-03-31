@@ -56,6 +56,20 @@ def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
     signal_modif = signal_modif / somme_hamming
     return signal_modif, somme_hamming
 
+def fourierInverse(fourier):
+    signal = []
+    for i in range(len(fourier)):
+        signal.append(np.real(FFT.ifft(fourier[i], 1024))[:32])
+    return signal
+
+
+def transformerFourier(morceaux):
+    fourier = []
+    for i in range(len(morceaux)):
+        fourier.append(FFT.fft(morceaux[i], 1024))
+    return fourier
+
+
 def main():
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
@@ -73,8 +87,16 @@ def main():
     # Fenêtre de Hamming
     morceau32ms = fenetrageHammingSignal(morceau32ms, N)
 
+    ## Etape 3. Calcul de la transformée de Fourier
+    fourier = transformerFourier(morceau32ms)
+
+    ## Etape 3. Calcul de la transformée de Fourier inverse
+    signal = fourierInverse(fourier)
+
+
+
     ## Reconstitution du signal
-    signal_modif, somme_hamming = reconstructionSignal(morceau32ms, m, N, valeurs_signal)
+    signal_modif, somme_hamming = reconstructionSignal(signal, m, N, valeurs_signal)
     print ("Signal modifié : ", signal_modif)
     # Création du fichier wav
     write("resultat.wav", frequence_enchantillonage, np.int16(signal_modif))
