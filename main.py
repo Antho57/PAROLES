@@ -80,6 +80,38 @@ def transformerFourier(morceaux):
         fourier.append(FFT.fft(morceaux[i], 1024))
     return fourier
 
+# Fonction qui calcule le spectre de phase
+# Etape 6. Spectre de phase
+def spectrePhase(fourier, fftsize):
+    spectre_phase = np.angle(fourier)
+    return spectre_phase
+
+# Fonction qui calcule le spectre de puissance
+# Etape 7. Reconstruction du spectre
+def spectrereconstruction (spectre_amplitude, spectre_phase,fftsize):
+    spectre_reconstruction = spectre_amplitude * np.exp(1j * spectre_phase)
+    return spectre_reconstruction
+
+# Fonction qui réalise la moyenne sur les 4-5 premiers spectres
+# Etape 8. Estimation du spectre de bruit
+def spectreAmplitudeBruit(spectre_amplitude, fftsize):
+    spectre_amplitude_bruit = np.zeros(fftsize)
+    for i in range(4):
+        spectre_amplitude_bruit += spectre_amplitude[i]
+    spectre_amplitude_bruit = spectre_amplitude_bruit / 4
+    return spectre_amplitude_bruit
+
+# Fonction qui réalise le débruitage
+# Etape 9. Débruitage par soustraction spectrale
+def spectreAmplitudeDebruitage(spectre_amplitude, spectre_amplitude_bruit, fftsize):
+    alpha = 2
+    beta = 1
+    gamma = 0
+    spectre_amplitude_debruitage = np.zeros(fftsize)
+    for k in range(len(spectre_amplitude)):
+        soustraction = ((spectre_amplitude[k] ** alpha) - beta*(spectre_amplitude_bruit[k] ** alpha))**1/alpha
+        spectre_amplitude_debruitage[k] = soustraction if soustraction > 0 else gamma*spectre_amplitude_bruit[k]
+    return spectre_amplitude_debruitage
 
 def main():
     ## Etape 1. Ouverture du fichier wav
@@ -101,9 +133,6 @@ def main():
     ## Etape 3. Calcul de la transformée de Fourier
     fourier = transformerFourier(morceau32ms)
 
-    ## Etape 3. Calcul de la transformée de Fourier inverse
-    signal = fourierInverse(fourier)
-
     ## Etape 4. Calcul du spectre d'amplitude
     # Calcul du spectre d'amplitude
     spectre_amplitude_log, spectre_amplitude = spectreAmplitude(fourier, 1024)
@@ -114,9 +143,22 @@ def main():
     plt.imshow(spectre_amplitude_log, aspect='auto')
     plt.show()
 
-
     ## Etape 6. Spectre de phase
+    spectre_phase = spectrePhase(fourier, 1024)
 
+    ## Etape 8.9. Traitement sur le spectre d'amplitude
+    # Estimation du spectre d'amplitude du bruit
+    spectre_amplitude_bruit = spectreAmplitudeBruit(spectre_amplitude, 1024)
+    # Débruitage par soustraction spectrale
+    spectre_amplitude = spectreAmplitudeDebruitage(spectre_amplitude, spectre_amplitude_bruit, 1024)
+
+    ## Etape 7. Reconstruction du signal
+    # Reconstruction du spectre
+    spectre_reconstruction = spectrereconstruction(spectre_amplitude, spectre_phase, 1024)
+
+    ## Etape 3. Calcul de la transformée de Fourier inverse
+    signal = fourierInverse(spectre_reconstruction)
+    print("Signal : ", signal)
 
     ## Reconstitution du signal
     signal_modif, somme_hamming = reconstructionSignal(signal, m, N, valeurs_signal)
