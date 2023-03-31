@@ -60,20 +60,20 @@ def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
 # Etape 4. Spectre d'amplitude
 # spectre_amplitude[k] = 20.log(|X_k(o)|)
 def spectreAmplitude(spectre, fftsize):
-    spectre_amplitude = np.zeros(fftsize)
-    spectre_amplitude_log = np.zeros(fftsize)
-    for k in range(fftsize):
-        spectre_amplitude_log[k] = 20 * np.log10(np.abs(spectre[k]))
-        spectre_amplitude[k] = np.abs(spectre[k])
+    spectre_amplitude_log = 20 * np.log10(np.abs(spectre))
+    spectre_amplitude = np.abs(spectre)
     return spectre_amplitude_log, spectre_amplitude
 
+# Fonction qui calcule la transformée de Fourier inverse
+# Etape 3. Calcul de la transformée de Fourier inverse
 def fourierInverse(fourier):
     signal = []
     for i in range(len(fourier)):
-        signal.append(np.real(FFT.ifft(fourier[i], 1024))[:32])
+        signal.append(np.real(FFT.ifft(fourier[i], 1024)))
     return signal
 
-
+# Fonction qui calcule la transformée de Fourier
+# Etape 3. Calcul de la transformée de Fourier
 def transformerFourier(morceaux):
     fourier = []
     for i in range(len(morceaux)):
@@ -91,8 +91,8 @@ def main():
 
     ## Etape 2. Fenetrage de Hamming
     # Variables de découpage (tout les 8ms et fenêtre de 32ms)
-    m = 8
-    N = 32
+    m = 8 * frequence_enchantillonage // 1000
+    N = 32 * frequence_enchantillonage // 1000
     morceau32ms = getMorceau32ms(valeurs_signal, m, N)
     print("Morceaux de 32ms : ", morceau32ms)
     # Fenêtre de Hamming
@@ -106,10 +106,13 @@ def main():
 
     ## Etape 4. Calcul du spectre d'amplitude
     # Calcul du spectre d'amplitude
-    spectre_amplitude_log, spectre_amplitude = spectreAmplitude(morceau32ms[0], 32)
+    spectre_amplitude_log, spectre_amplitude = spectreAmplitude(fourier, 1024)
+    # Transpose le tableau pour avoir les bonnes dimensions
+    spectre_amplitude_log = spectre_amplitude_log.T
 
     ## Etape 5. Pause sur le debruitage
-    plt.imshow(spectre_amplitude_log[:32//2], origin='lower', aspect='auto', extent=[0, 32, 0, 512])
+    plt.imshow(spectre_amplitude_log, aspect='auto')
+    plt.show()
 
 
     ## Etape 6. Spectre de phase
