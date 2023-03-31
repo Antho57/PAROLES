@@ -56,6 +56,17 @@ def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
     signal_modif = signal_modif / somme_hamming
     return signal_modif, somme_hamming
 
+# Fonction qui calcule le spectre d'amplitude sur une fenêtre de 32ms
+# Etape 4. Spectre d'amplitude
+# spectre_amplitude[k] = 20.log(|X_k(o)|)
+def spectreAmplitude(spectre, fftsize):
+    spectre_amplitude = np.zeros(fftsize)
+    spectre_amplitude_log = np.zeros(fftsize)
+    for k in range(fftsize):
+        spectre_amplitude_log[k] = 20 * np.log10(np.abs(spectre[k]))
+        spectre_amplitude[k] = np.abs(spectre[k])
+    return spectre_amplitude_log, spectre_amplitude
+
 def main():
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
@@ -72,6 +83,17 @@ def main():
     print("Morceaux de 32ms : ", morceau32ms)
     # Fenêtre de Hamming
     morceau32ms = fenetrageHammingSignal(morceau32ms, N)
+
+    ## Etape 4. Calcul du spectre d'amplitude
+    # Calcul du spectre d'amplitude
+    spectre_amplitude_log, spectre_amplitude = spectreAmplitude(morceau32ms[0], 32)
+
+    ## Etape 5. Pause sur le debruitage
+    plt.imshow(spectre_amplitude_log[:32//2], origin='lower', aspect='auto', extent=[0, 32, 0, 512])
+
+
+    ## Etape 6. Spectre de phase
+
 
     ## Reconstitution du signal
     signal_modif, somme_hamming = reconstructionSignal(morceau32ms, m, N, valeurs_signal)
