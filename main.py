@@ -37,6 +37,25 @@ def getMorceau32ms(signal, m, N):
         m32ms[i] = signal[debut_fenetre:fin_fenetre]
     return m32ms
 
+# Fonction qui reconstruit le signal
+# Etape 2. Reconstitution du signal
+def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
+    signal_modif = np.zeros(len(valeurs_signal))
+    somme_hamming = np.zeros(len(valeurs_signal))
+    for i in range(len(morceau32ms)):
+        debut_fenetre = i * m
+        fin_fenetre = debut_fenetre + N
+        signal_modif[debut_fenetre:fin_fenetre] += morceau32ms[i]
+        somme_hamming[debut_fenetre:fin_fenetre] += fenetrageHamming(N)
+
+    # On remplace les 0 par 1 pour éviter les divisions par 0
+    for i in range(len(somme_hamming)):
+        if somme_hamming[i] == 0:
+            somme_hamming[i] = 1
+
+    signal_modif = signal_modif / somme_hamming
+    return signal_modif, somme_hamming
+
 def main():
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
@@ -55,19 +74,9 @@ def main():
     morceau32ms = fenetrageHammingSignal(morceau32ms, N)
 
     ## Reconstitution du signal
-    signal_modif = np.zeros(len(valeurs_signal))
-    somme_hamming = np.zeros(len(valeurs_signal))
-    for i in range(len(morceau32ms)):
-        debut_fenetre = i * m
-        fin_fenetre = debut_fenetre + N
-        signal_modif[debut_fenetre:fin_fenetre] += morceau32ms[i]
-        somme_hamming[debut_fenetre:fin_fenetre] += fenetrageHamming(N)
-
-    for i in range(len(somme_hamming)):
-        if somme_hamming[i] == 0:
-            somme_hamming[i] = 1
-    signal_modif = signal_modif / somme_hamming
+    signal_modif, somme_hamming = reconstructionSignal(morceau32ms, m, N, valeurs_signal)
     print ("Signal modifié : ", signal_modif)
+    # Création du fichier wav
     write("resultat.wav", frequence_enchantillonage, np.int16(signal_modif))
 
 if __name__ == "__main__":
