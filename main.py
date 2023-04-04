@@ -4,10 +4,9 @@ import numpy as np
 from scipy.io.wavfile import write
 import numpy.fft as FFT
 
-# Fonction qui ouvre un fichier wav et
-# renvoie la fréquence d'échantillonnage, le signal et le nombre d'échantillons
+
 # Etape 1. Ouverture du fichier wav
-def ouvertureWav(filename = 'fichiers_bruit/test_seg.wav'):
+def ouvertureWav(filename = 'fichiers_bruit/test_seg_bruit_10dB.wav'):
     fichier = filename
     frequence_enchantillonage, valeurs_signal = read(fichier)
     nb_echantillon = valeurs_signal.shape[0]
@@ -15,7 +14,6 @@ def ouvertureWav(filename = 'fichiers_bruit/test_seg.wav'):
 
     return frequence_enchantillonage, valeurs_signal, nb_echantillon
 
-# Fonction qui renvoie une fenêtre de Hamming
 # Etape 2. Fenetrage de Hamming
 def fenetrageHamming(N):
     return 0.54 - 0.46 * np.cos(2 * np.pi * np.arange(N) / (N - 1))
@@ -26,7 +24,6 @@ def fenetrageHammingSignal(signal, N):
         signal[i] = signal[i] * fenetrageHamming(N)
     return signal
 
-# Fonction qui renvoie un tableau de morceaux de 32ms
 # Etape 2. Récupération de la fenêtre à l'instant i et de taille m
 def getMorceau32ms(signal, m, N):
     nb_fenetres = int((len(signal) - N) / m) + 1
@@ -37,7 +34,6 @@ def getMorceau32ms(signal, m, N):
         m32ms[i] = signal[debut_fenetre:fin_fenetre]
     return m32ms
 
-# Fonction qui reconstruit le signal
 # Etape 2. Reconstitution du signal
 def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
     signal_modif = np.zeros(len(valeurs_signal))
@@ -56,77 +52,80 @@ def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
     signal_modif = signal_modif / somme_hamming
     return signal_modif, somme_hamming
 
-# Fonction qui calcule le spectre d'amplitude sur une fenêtre de 32ms
-# Etape 4. Spectre d'amplitude
-# spectre_amplitude[k] = 20.log(|X_k(o)|)
-def spectreAmplitude(spectre, fftsize):
-    spectre_amplitude_log = 20 * np.log10(np.abs(spectre))
-    spectre_amplitude = np.abs(spectre)
-    return spectre_amplitude_log, spectre_amplitude
-
-# Fonction qui calcule la transformée de Fourier inverse
-# Etape 3. Calcul de la transformée de Fourier inverse
-def fourierInverse(fourier):
-    signal = []
-    for i in range(len(fourier)):
-        signal.append(np.real(FFT.ifft(fourier[i], 1024)))
-    return signal
-
-# Fonction qui calcule la transformée de Fourier
-# Etape 3. Calcul de la transformée de Fourier
+## Etape 3. Calcul de la transformée de Fourier
 def transformerFourier(morceaux):
     fourier = []
     for i in range(len(morceaux)):
         fourier.append(FFT.fft(morceaux[i], 1024))
     return fourier
 
-# Fonction qui calcule le spectre de phase
-# Etape 6. Spectre de phase
-def spectrePhase(fourier, fftsize):
-    spectre_phase = np.angle(fourier)
-    return spectre_phase
+## Etape 3. Fourier inverse
+def fourierInverseDebruitee(fourier_inverse_debruitee):
+    signal = []
+    for i in range(len(fourier_inverse_debruitee)):
+        signal.append(np.real(FFT.ifft(fourier_inverse_debruitee[i], 1024))[:32])
+    return signal
 
-# Fonction qui calcule le spectre de puissance
-# Etape 7. Reconstruction du spectre
-def spectrereconstruction (spectre_amplitude, spectre_phase,fftsize):
-    spectre_reconstruction = spectre_amplitude * np.exp(1j * spectre_phase)
-    return spectre_reconstruction
+#Etape 4. Calcul de l'amplitude du spectre et le log
+def spectreAmplitude(fourier):
+    spectre = []
+    for i in range(len(fourier)):
+        spectre.append(np.abs(fourier[i]))
+    return spectre
 
-# Fonction qui réalise la moyenne sur les 4-5 premiers spectres
-# Etape 8. Estimation du spectre de bruit
-def spectreAmplitudeBruit(spectre_amplitude, fftsize):
-    spectre_amplitude_bruit = np.zeros(fftsize)
-    for i in range(4):
-        spectre_amplitude_bruit += spectre_amplitude[i]
-    spectre_amplitude_bruit = spectre_amplitude_bruit / 4
-    return spectre_amplitude_bruit
+## Etape 6. Calcul de la phase
+def spectrePhase(fourier):
+    spectre = []
+    for i in range(len(fourier)):
+        spectre.append(np.angle(fourier[i]))
+    return spectre
 
-# Fonction qui réalise le débruitage
-# Etape 9. Débruitage par soustraction spectrale
-def spectreAmplitudeDebruitage(spectre_amplitude, spectre_amplitude_bruit, fftsize):
-    alpha = 2
-    beta = 1
-    gamma = 0
-    spectre_amplitude_debruitage = np.zeros(fftsize)
-    for k in range(len(spectre_amplitude)):
-        soustraction = ((spectre_amplitude[k] ** alpha) - beta*(spectre_amplitude_bruit[k] ** alpha))**1/alpha
-        spectre_amplitude_debruitage[k] = soustraction if soustraction > 0 else gamma*spectre_amplitude_bruit[k]
-    return spectre_amplitude_debruitage
+## Etape 7. Reconstruction du signal
+def signalDebruite(spectre_debruite, spectre_phase):
+    fourier_inverse_debruitee = []
+    for i in range(len(spectre_debruite)):
+        fourier_inverse_debruitee.append(spectre_debruite[i] * np.exp(1j * spectre_phase[i]))
+    return fourier_inverse_debruitee
+
+#Etape 8. Calcul de la moyenne des 5 premiers spectres
+def moyenneSpectreAmplitudeBruit(spectre):
+    #Calcul de la moyenne des 5 premiers spectres
+    moyenne = 0
+    for i in range(5):
+        moyenne += spectre[i]
+    moyenne = moyenne / 5
+    return moyenne
+
+#Etape 9. Débruitage par soustraction
+def debruitage(spectre, moyenne):
+    spectre_debruite = []
+    for i in range(len(spectre)):
+        spectre_debruite.append(spectre[i] - moyenne)
+    return spectre_debruite
+
+
+#Affichage du signal original et du signal modifié
+def affichageSignal(signal, signal_modif):
+    plt.figure(1)
+    plt.subplot(311)
+    plt.plot(signal)
+    plt.title("Signal original")
+    plt.subplot(313)
+    plt.plot(signal_modif)
+    plt.title("Signal modifié")
+    plt.show()
+
 
 def main():
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
     frequence_enchantillonage, valeurs_signal, nb_echantillon = ouvertureWav()
-    print("Fréquence d'échantillonnage : ", frequence_enchantillonage)
-    print("Nombre d'échantillons : ", nb_echantillon)
-    print("Signal : ", valeurs_signal)
 
     ## Etape 2. Fenetrage de Hamming
     # Variables de découpage (tout les 8ms et fenêtre de 32ms)
-    m = 8 * frequence_enchantillonage // 1000
-    N = 32 * frequence_enchantillonage // 1000
+    m = 8
+    N = 32
     morceau32ms = getMorceau32ms(valeurs_signal, m, N)
-    print("Morceaux de 32ms : ", morceau32ms)
     # Fenêtre de Hamming
     morceau32ms = fenetrageHammingSignal(morceau32ms, N)
 
@@ -134,40 +133,36 @@ def main():
     fourier = transformerFourier(morceau32ms)
 
     ## Etape 4. Calcul du spectre d'amplitude
-    # Calcul du spectre d'amplitude
-    spectre_amplitude_log, spectre_amplitude = spectreAmplitude(fourier, 1024)
-    # Transpose le tableau pour avoir les bonnes dimensions
-    spectre_amplitude_log = spectre_amplitude_log.T
+    spectre = spectreAmplitude(fourier)
 
-    ## Etape 5. Pause sur le debruitage
-    plt.imshow(spectre_amplitude_log, aspect='auto')
+    ## Etape 5. Pause sur le spectre d'amplitude
+    spectre_log = (20 * np.log10(np.abs(fourier))).T
+    plt.imshow(spectre_log, aspect='auto')
     plt.show()
 
-    ## Etape 6. Spectre de phase
-    spectre_phase = spectrePhase(fourier, 1024)
+    ## Etape 6. Calcul du spectre de phase
+    spectre_phase = spectrePhase(fourier)
 
-    ## Etape 8.9. Traitement sur le spectre d'amplitude
-    # Estimation du spectre d'amplitude du bruit
-    spectre_amplitude_bruit = spectreAmplitudeBruit(spectre_amplitude, 1024)
-    # Débruitage par soustraction spectrale
-    spectre_amplitude = spectreAmplitudeDebruitage(spectre_amplitude, spectre_amplitude_bruit, 1024)
+    ## Etape 8. Calcul de la moyenne des spectres d'amplitude du bruit
+    moyenne = moyenneSpectreAmplitudeBruit(spectre)
 
-    ## Etape 7. Reconstruction du signal
-    # Reconstruction du spectre
-    spectre_reconstruction = spectrereconstruction(spectre_amplitude, spectre_phase, 1024)
+    ## Etape 9. Débruitage
+    spectre_debruite = debruitage(spectre, moyenne)
 
-    ## Etape 3. Calcul de la transformée de Fourier inverse
-    signal = fourierInverse(spectre_reconstruction)
-    print("Signal : ", signal)
+    ## Etape 7. Calcul du signal débruité
+    fourier_inverse_debruitee = signalDebruite(spectre_debruite, spectre_phase)
 
-    ## Reconstitution du signal
-    signal_modif, somme_hamming = reconstructionSignal(signal, m, N, valeurs_signal)
-    print ("Signal modifié : ", signal_modif)
-    # Création du fichier wav
+    ## Etape 3. Calcul de la transformée de Fourier inverse débruitée
+    signal_debruite = fourierInverseDebruitee(fourier_inverse_debruitee)
+
+    ## Affichage du signal original et du signal débruité
+    affichageSignal(morceau32ms, signal_debruite)
+
+    ##Reconstruction du signal
+    signal_modif, somme_hamming = reconstructionSignal(signal_debruite, m, N, valeurs_signal)
+
+    ##Création du fichier wav
     write("resultat.wav", frequence_enchantillonage, np.int16(signal_modif))
 
 if __name__ == "__main__":
     main()
-
-
-
