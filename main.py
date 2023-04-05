@@ -4,6 +4,7 @@ import numpy as np
 from scipy.io.wavfile import write
 import numpy.fft as FFT
 from datetime import datetime
+import os
 
 
 # Etape 1. Ouverture du fichier wav
@@ -163,10 +164,13 @@ def main():
     ## Affichage du signal original et du signal débruité
     affichageSignal(morceau32ms, signal_debruite)
 
-    ##Reconstruction du signal
+    ## Reconstruction du signal
     signal_modif, somme_hamming = reconstructionSignal(signal_debruite, m, N, valeurs_signal)
 
-    ##Création du fichier wav avec en nom "resultat-[current_time].wav"
+    ## Création du fichier wav avec en nom "resultat-[current_time].wav"
+    # Création du dossier "out" s'il n'existe pas
+    if not os.path.exists("./out"):
+        os.makedirs("./out")
     current_time = datetime.now().strftime("%d_%m_%H:%M:%S")
     write("./out/resultat-" + current_time +".wav", frequence_enchantillonage, np.int16(signal_modif))
 
