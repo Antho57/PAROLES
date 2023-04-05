@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io.wavfile import write
 import numpy.fft as FFT
+from datetime import datetime
 
 
 # Etape 1. Ouverture du fichier wav
+# Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
 def ouvertureWav(filename = 'fichiers_bruit/test_seg_bruit_10dB.wav'):
     fichier = filename
     frequence_enchantillonage, valeurs_signal = read(fichier)
@@ -15,33 +17,35 @@ def ouvertureWav(filename = 'fichiers_bruit/test_seg_bruit_10dB.wav'):
     return frequence_enchantillonage, valeurs_signal, nb_echantillon
 
 # Etape 2. Fenetrage de Hamming
+# Fonction qui renvoie le fenetrage de Hamming d'une taille N
 def fenetrageHamming(N):
     return 0.54 - 0.46 * np.cos(2 * np.pi * np.arange(N) / (N - 1))
 
 # Fonction qui renvoie le fenetrage de Hamming d'un signal de taille N
 def fenetrageHammingSignal(signal, N):
+    value_hamming = fenetrageHamming(N)
     for i in range(len(signal)):
-        signal[i] = signal[i] * fenetrageHamming(N)
+        signal[i] = signal[i] * value_hamming
     return signal
 
 # Etape 2. Récupération de la fenêtre à l'instant i et de taille m
-def getMorceau32ms(signal, m, N):
+def getMorceau(signal, m, N):
     nb_fenetres = int((len(signal) - N) / m) + 1
-    m32ms = np.zeros((nb_fenetres, N))
+    m_taille_N = np.zeros((nb_fenetres, N))
     for i in range(nb_fenetres):
         debut_fenetre = i * m
         fin_fenetre = debut_fenetre + N
-        m32ms[i] = signal[debut_fenetre:fin_fenetre]
-    return m32ms
+        m_taille_N[i] = signal[debut_fenetre:fin_fenetre]
+    return m_taille_N
 
 # Etape 2. Reconstitution du signal
-def reconstructionSignal(morceau32ms, m, N, valeurs_signal):
+def reconstructionSignal(morceau, m, N, valeurs_signal):
     signal_modif = np.zeros(len(valeurs_signal))
     somme_hamming = np.zeros(len(valeurs_signal))
-    for i in range(len(morceau32ms)):
+    for i in range(len(morceau)):
         debut_fenetre = i * m
         fin_fenetre = debut_fenetre + N
-        signal_modif[debut_fenetre:fin_fenetre] += morceau32ms[i]
+        signal_modif[debut_fenetre:fin_fenetre] += morceau[i]
         somme_hamming[debut_fenetre:fin_fenetre] += fenetrageHamming(N)
 
     # On remplace les 0 par 1 pour éviter les divisions par 0
@@ -66,7 +70,7 @@ def fourierInverseDebruitee(fourier_inverse_debruitee):
         signal.append(np.real(FFT.ifft(fourier_inverse_debruitee[i], 1024))[:32])
     return signal
 
-#Etape 4. Calcul de l'amplitude du spectre et le log
+#Etape 4. Calcul de l'amplitude du spectre
 def spectreAmplitude(fourier):
     spectre = []
     for i in range(len(fourier)):
@@ -80,7 +84,7 @@ def spectrePhase(fourier):
         spectre.append(np.angle(fourier[i]))
     return spectre
 
-## Etape 7. Reconstruction du signal
+## Etape 7. Génération du signal débruité
 def signalDebruite(spectre_debruite, spectre_phase):
     fourier_inverse_debruitee = []
     for i in range(len(spectre_debruite)):
@@ -116,6 +120,7 @@ def affichageSignal(signal, signal_modif):
     plt.show()
 
 
+# Main function
 def main():
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
@@ -125,7 +130,7 @@ def main():
     # Variables de découpage (tout les 8ms et fenêtre de 32ms)
     m = 8
     N = 32
-    morceau32ms = getMorceau32ms(valeurs_signal, m, N)
+    morceau32ms = getMorceau(valeurs_signal, m, N)
     # Fenêtre de Hamming
     morceau32ms = fenetrageHammingSignal(morceau32ms, N)
 
@@ -161,8 +166,10 @@ def main():
     ##Reconstruction du signal
     signal_modif, somme_hamming = reconstructionSignal(signal_debruite, m, N, valeurs_signal)
 
-    ##Création du fichier wav
-    write("resultat.wav", frequence_enchantillonage, np.int16(signal_modif))
+    ##Création du fichier wav avec en nom "resultat-[current_time].wav"
+    current_time = datetime.now().strftime("%d_%m_%H:%M:%S")
+    write("./out/resultat-" + current_time +".wav", frequence_enchantillonage, np.int16(signal_modif))
 
+# Call main function
 if __name__ == "__main__":
     main()
