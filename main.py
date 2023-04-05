@@ -10,6 +10,16 @@ import os
 # Etape 1. Ouverture du fichier wav
 # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
 def ouvertureWav(filename = 'fichiers_bruit/test_seg_bruit_10dB.wav'):
+    # Vérification de l'existence du fichier
+    if not os.path.exists(filename):
+        print("Le fichier n'existe pas")
+        exit(1)
+
+    # Vérification fichier wav
+    if not filename.endswith('.wav'):
+        print("Le fichier n'est pas un fichier wav")
+        exit(1)
+
     fichier = filename
     frequence_enchantillonage, valeurs_signal = read(fichier)
     nb_echantillon = valeurs_signal.shape[0]
