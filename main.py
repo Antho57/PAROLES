@@ -181,8 +181,8 @@ def main():
     # Création du dossier "out" s'il n'existe pas
     if not os.path.exists("./out"):
         os.makedirs("./out")
-    current_time = datetime.now().strftime("%d_%m_%H:%M:%S")
-    write("./out/resultat-" + current_time +".wav", frequence_enchantillonage, np.int16(signal_modif))
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    write("./out/resultat_" + current_time +".wav", frequence_enchantillonage, np.int16(signal_modif))
 
 # Call main function
 if __name__ == "__main__":
