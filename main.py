@@ -1,26 +1,28 @@
-from scipy.io.wavfile import read
+import os
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.io.wavfile import write
 import numpy.fft as FFT
+from scipy.io.wavfile import read
+from scipy.io.wavfile import write
 from datetime import datetime
-import os
 
+DEFAULT_FILENAME = 'fichiers_bruit/test_seg_bruit_10dB.wav'
 
 # Etape 1. Ouverture du fichier wav
 # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
-def ouvertureWav(filename = 'fichiers_bruit/test_seg_bruit_10dB.wav'):
+def ouvertureWav():
     # Vérification de l'existence du fichier
-    if not os.path.exists(filename):
+    if not os.path.exists(DEFAULT_FILENAME):
         print("Le fichier n'existe pas")
         exit(1)
 
     # Vérification fichier wav
-    if not filename.endswith('.wav'):
+    if not DEFAULT_FILENAME.endswith('.wav'):
         print("Le fichier n'est pas un fichier wav")
         exit(1)
 
-    fichier = filename
+    fichier = DEFAULT_FILENAME
     frequence_enchantillonage, valeurs_signal = read(fichier)
     nb_echantillon = valeurs_signal.shape[0]
     duree_ms = 1000 * nb_echantillon / frequence_enchantillonage
@@ -133,6 +135,10 @@ def affichageSignal(signal, signal_modif):
 
 # Main function
 def main():
+    # Si un fichier est passé en argument on l'utilise
+    if len(sys.argv) == 2:
+        DEFAULT_FILE = sys.argv[1]
+
     ## Etape 1. Ouverture du fichier wav
     # Récupération de la fréquence d'échantillonnage, du signal et du nombre d'échantillons
     frequence_enchantillonage, valeurs_signal, nb_echantillon = ouvertureWav()
