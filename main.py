@@ -87,21 +87,15 @@ def signalDebruite(spectre_debruite, spectre_phase):
         fourier_inverse_debruitee.append(spectre_debruite[i] * np.exp(1j * spectre_phase[i]))
     return fourier_inverse_debruitee
 
-#Etape 8. Calcul de la moyenne des 5 premiers spectres
-def moyenneSpectreAmplitudeBruit(spectre):
-    #Calcul de la moyenne des 5 premiers spectres
-    moyenne = 0
-    for i in range(5):
-        moyenne += spectre[i]
-    moyenne = moyenne / 5
-    return moyenne
+## Etape 8. Calcul de la moyenne des 5 premiers spectres
+def moyenneSpectreAmplitudeBruit(spectre, n_frames=5):
+    return np.mean(spectre[:n_frames], axis=0)
 
-#Etape 9. Débruitage par soustraction
-def debruitage(spectre, moyenne):
-    spectre_debruite = []
-    for i in range(len(spectre)):
-        spectre_debruite.append(spectre[i] - moyenne)
-    return spectre_debruite
+## Etape 9. Débruitage par soustraction
+def debruitage(spectre, moyenne, alpha=2, beta=1, gamma=0):
+    diff = spectre - (alpha * (moyenne - beta))
+    np.maximum(diff, gamma * np.abs(spectre), out=diff)
+    return diff
 
 
 #Affichage du signal original et du signal modifié
